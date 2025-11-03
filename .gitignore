@@ -1,0 +1,24 @@
+# Virtual environment
+.venv/
+venv/
+*.pyc
+__pycache__/
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+logs/
+
+# Egg info
+*.egg-info/
+
+# Build
+build/
+dist/

@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clara-server"
+version = "2.0.0"
+description = "Clara Server - Complete backend with infrastructure, data services, and business logic"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "pydantic>=2.0.0",
+    "googlemaps>=4.10.0",
+    "python-dotenv>=1.0.0",
+    "livekit>=0.11.0",
+    "livekit-api>=0.6.0",
+    "psycopg[binary]~=3.1",
+    "sqlalchemy~=2.0",
+    "redis~=5.0",
+    "chromadb>=0.5.0",
+    "sentence-transformers~=2.2",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["jobs*", "knowledge*", "caching*", "context*", "manufacturer*", "monitoring*", "nudges*", "patterns*"]
