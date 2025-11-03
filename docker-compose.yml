@@ -1,0 +1,172 @@
+services:
+  # ============================================================================
+  # Redis - Cache, Analytics, User Preferences
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: clara-redis
+    restart: unless-stopped
+    ports:
+      - "6381:6379"
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - clara-network
+
+  # ============================================================================
+  # PostgreSQL - Database Backend
+  # ============================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: clara-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-clara}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-clara_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-clara}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-clara}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - clara-network
+
+  # ============================================================================
+  # TimescaleDB - Time-Series Analytics
+  # ============================================================================
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: clara-timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${TIMESCALE_USER:-clara}
+      POSTGRES_PASSWORD: ${TIMESCALE_PASSWORD:-clara_analytics_password}
+      POSTGRES_DB: ${TIMESCALE_DB:-clara_analytics}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"  # Different port to avoid conflict with postgres
+    volumes:
+      - timescale-data:/var/lib/postgresql/data
+      - ./init-scripts-timescale:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TIMESCALE_USER:-clara}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - clara-network
+
+  # ============================================================================
+  # ChromaDB - Vector Database for Knowledge Base
+  # ============================================================================
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: clara-chromadb
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma-data:/chroma/chroma
+    environment:
+      IS_PERSISTENT: "TRUE"
+      ANONYMIZED_TELEMETRY: "FALSE"
+      ALLOW_RESET: "TRUE"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8000/api/v1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - clara-network
+
+  # ============================================================================
+  # Redis Commander - Redis Management UI (Optional)
+  # ============================================================================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: clara-redis-commander
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - clara-network
+    profiles:
+      - tools  # Only start with --profile tools
+
+  # ============================================================================
+  # pgAdmin - PostgreSQL Management UI (Optional)
+  # ============================================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: clara-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@clara.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_LISTEN_PORT: 80
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - clara-network
+    profiles:
+      - tools  # Only start with --profile tools
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  redis-data:
+    driver: local
+    name: clara-redis-data
+  postgres-data:
+    driver: local
+    name: clara-postgres-data
+  timescale-data:
+    driver: local
+    name: clara-timescale-data
+  chroma-data:
+    driver: local
+    name: clara-chroma-data
+  pgadmin-data:
+    driver: local
+    name: clara-pgadmin-data
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  clara-network:
+    driver: bridge
+    name: clara-network
