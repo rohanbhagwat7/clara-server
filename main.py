@@ -37,6 +37,9 @@ from jobs.data_capture import DataCaptureValidator, DataCaptureField
 # Import authentication routes
 from auth.routes import router as auth_router
 
+# Import user management routes
+from users.routes import router as users_router
+
 # Initialize services
 distance_service = initialize_distance_service(os.getenv('GOOGLE_MAPS_API_KEY'))
 livekit_service = initialize_livekit_service(
@@ -94,6 +97,9 @@ app.add_middleware(
 
 # Include authentication routes
 app.include_router(auth_router)
+
+# Include user management routes
+app.include_router(users_router)
 
 
 # Startup event handler to initialize async services
