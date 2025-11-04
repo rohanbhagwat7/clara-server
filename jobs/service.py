@@ -10,6 +10,41 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+def format_historical_inspections(inspections: List[Dict[str, Any]]) -> str:
+    """
+    Format historical inspections array into a readable string
+
+    Args:
+        inspections: List of inspection dictionaries with date, technician, findings, issues
+
+    Returns:
+        Formatted string for display in frontend
+    """
+    if not inspections:
+        return ""
+
+    lines = []
+    lines.append(f"Historical Inspections ({len(inspections)} records):\n")
+
+    for inspection in inspections:
+        date = inspection.get('date', 'Unknown date')
+        technician = inspection.get('technician', 'Unknown technician')
+        findings = inspection.get('findings', 'No findings recorded')
+        issues = inspection.get('issues', [])
+
+        lines.append(f"• {date} (by {technician})")
+        lines.append(f"  Findings: {findings}")
+
+        if issues:
+            lines.append(f"  Issues found:")
+            for issue in issues:
+                lines.append(f"    - {issue}")
+
+        lines.append("")  # Blank line between inspections
+
+    return "\n".join(lines)
+
 # Database connection
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://clara:clara_dev_password@localhost:5432/clara")
 
@@ -108,8 +143,9 @@ class JobService:
                             for eq in equipment_list
                         ] if equipment_list else []
 
-                        # Parse historical inspections
-                        history = row[14] if row[14] else []
+                        # Parse historical inspections and format as string
+                        historical_inspections = row[14] if row[14] else []
+                        history = format_historical_inspections(historical_inspections)
 
                         # Parse checklist items
                         checklist = row[16] if row[16] else []
@@ -262,8 +298,9 @@ class JobService:
                         for eq in equipment_list
                     ] if equipment_list else []
 
-                    # Parse historical inspections
-                    history = row[14] if row[14] else []
+                    # Parse historical inspections and format as string
+                    historical_inspections = row[14] if row[14] else []
+                    history = format_historical_inspections(historical_inspections)
 
                     # Parse checklist items
                     checklist = row[16] if row[16] else []
