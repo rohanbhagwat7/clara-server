@@ -34,6 +34,9 @@ from manufacturer.service import get_manufacturer_service
 from nudges import Nudge, NudgeAction, NudgeType, NudgePriority
 from jobs.data_capture import DataCaptureValidator, DataCaptureField
 
+# Import authentication routes
+from auth.routes import router as auth_router
+
 # Initialize services
 distance_service = initialize_distance_service(os.getenv('GOOGLE_MAPS_API_KEY'))
 livekit_service = initialize_livekit_service(
@@ -88,6 +91,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include authentication routes
+app.include_router(auth_router)
 
 
 # Startup event handler to initialize async services
@@ -1060,20 +1066,26 @@ async def get_daily_brief(
 @app.post("/token/job")
 async def create_job_token(
     job_id: str = Body(...),
+    user_id: Optional[str] = Body(None),
+    email: Optional[str] = Body(None),
     participant_name: Optional[str] = Body(None),
     participant_identity: Optional[str] = Body(None),
     participant_attributes: Optional[Dict[str, str]] = Body(None),
 ):
     """
     Job-specific token endpoint - creates room with job context
-    Room name = job ID (e.g., "JOB-2024-1022-001")
+    Room name = USER_ID_EMAIL_JOB_ID (e.g., "USER-ABC123_john@example.com_JOB-2024-1022-001")
     """
     if not livekit_service:
         raise HTTPException(status_code=503, detail="LiveKit service not configured")
 
     try:
-        # Create room with job ID as name
-        room_name = job_id
+        # Create room with USER_ID + EMAIL + JOB_ID as name
+        if user_id and email:
+            room_name = f"{user_id}_{email}_{job_id}"
+        else:
+            # Fallback to just job_id if user info not provided
+            room_name = job_id
         await livekit_service.create_room(
             name=room_name,
             empty_timeout=600,  # 10 minutes for job sessions

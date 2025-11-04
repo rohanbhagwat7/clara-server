@@ -20,6 +20,11 @@ dependencies = [
     "redis~=5.0",
     "chromadb>=0.5.0",
     "sentence-transformers~=2.2",
+    "google-auth>=2.42.1",
+    "google-auth-oauthlib>=1.2.2",
+    "python-jose[cryptography]>=3.5.0",
+    "passlib[bcrypt]>=1.7.4",
+    "email-validator>=2.3.0",
 ]
 
 [tool.setuptools.packages.find]
